@@ -1,6 +1,5 @@
 from random import choice, randint
 from math import sin
-import numpy
 import matplotlib.pyplot as plot
 
 list_selection = []
