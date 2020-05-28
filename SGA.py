@@ -51,18 +51,11 @@ def selection():
         # update to table
         list_selection[i].update({'Prob': aux_prob, 'Exp count': aux_expected_count})
 
-    # random for calculate the act count
-    for i in range(num_cromosomas):
-        numbers_random.append(randint(1,100))
-    # numbers randoms for calculate the Act count
+    # Calculate the actual count rounded the exp count
     for i in range(len(list_selection)):
-        # variable set value of the probabilities * 100
-        valor_max = 0
-        for j in range(len(list_selection)):
-            valor_max += (list_selection[j].get('Prob') * 100)
-            if numbers_random[i] < valor_max:
-                list_selection[j].update({'Act count': list_selection[j].get('Act count')+1})
-                break
+        aux_exp_count = list_selection[i].get('Exp count')
+        aux_act_count = round(aux_exp_count)
+        list_selection[i].update({'Act count': aux_act_count})
 
     posicion = 0
     # Print list of a generation
@@ -92,7 +85,11 @@ def crossover():
     print('<==============================Crossover Generation #',count_generations,'==============================>')
     for i in range(0, len(list_crossover), 2): # jumps of 2 positions
         # pointer of crossover in the bits
-        pointer_crossover = randint(1, num_cromosomas-1)
+        print('Cromosomas: #',i,' y #',i+1)
+        aux_pointer_crossover = int(input('Ingrese el punto de cruza entre los cromosomas:'))
+        while aux_pointer_crossover >= num_bits:
+            aux_pointer_crossover = int(input('Error, el punto de cruza ingresado, supero el numero de bits\nIngrese un punto de cruza entre 0 y ',num_bits,': '))
+        pointer_crossover = aux_pointer_crossover
         # get the individual bits
         chromosome_1 = list_crossover[i].get('Mating pool')[0:pointer_crossover]
         # get the next individual bits
@@ -237,7 +234,7 @@ def printListResult():
     for i in range(len(list_result)):
         print(list_result[i])
 
-def generateGraphics():
+def generateGraphics(scaleXMin, scaleXMax):
     global count_generations
     maximos = []
     minimos = []
@@ -254,6 +251,9 @@ def generateGraphics():
     plot.legend(loc='upper right')
     plot.xlabel('Generaciones')
     plot.ylabel('Fitness')
+    plot.title('SGA - Simple Algorithm Genetic')
+    limits = [scaleXMin, scaleXMax, min(minimos)-100, max(maximos)+100]
+    plot.axis(limits)
     plot.grid()
     plot.show()
 
@@ -288,6 +288,8 @@ for i in range(num_generations):
     crossover()
     mutation()
     updateTables(num_cromosomas)
-
+print('<================Margenes de grafica=================>')
+XScaleMin = float(input('Ingrese el margen minimo de X a mostrar en el grafico:'))
+XScaleMax = float(input('Ingrese el margen maximo de X a mostrar en el grafico:'))
 printListResult()
-generateGraphics()
+generateGraphics(XScaleMin, XScaleMax)
