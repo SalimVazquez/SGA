@@ -1,13 +1,37 @@
 from random import choice, randint
-from math import sin
+from math import sin, pow
 import matplotlib.pyplot as plot
+import numpy as numpy
 
 list_selection = []
 list_crossover = []
 list_mutation = []
 list_result = []
+list_padre_hijo = []
 numbers_random = []
 count_generations = 0
+
+def print_list_selection(total_fitness, prom_fitness):
+    for i in range(len(list_selection)):
+        print(list_selection[i])
+    print('Total fitness:',total_fitness,'\nAverage fitness:',prom_fitness)
+
+def print_list_crossover():
+    for i in range(len(list_crossover)):
+        print(list_crossover[i])
+
+def print_list_mutation():
+    for i in range(len(list_mutation)):
+        print(list_mutation[i])
+
+def print_list_result():
+    for i in range(len(list_result)):
+        print(list_result[i])
+
+def print_padre_hijo():
+    print('<===Mejores resultados===>')
+    for i in range(len(list_padre_hijo)):
+        print(list_padre_hijo[i])
 
 def createList(num_cromosomas):
     global list_selection
@@ -16,13 +40,26 @@ def createList(num_cromosomas):
 
     for i in range(num_cromosomas):
         bit = ''.join(choice('01') for _ in range(num_bits))
-        dictSeleccion =  {'Cromo #' : i, 'Poblation': bit, 'X' : 0,'Fitness' : 0, 'Prob':0, 'Exp count': 0, 'Act count': 0},
-        dictCrossover =  {'Cromo #' : i, 'Mating pool': bit, 'Crossover Point' : 0, 'Offspring after XOver': 0, 'Value' : 0, 'Fitness' : 0,},
-        dictMutation =  {'Cromo #' : i, 'After XOver': 0,  'After XMutation': 0, 'X' : 0, 'Fitness' : 0},
+        dict_selection =  {'Cromo #' : i, 'Poblation': bit, 'X' : 0,'Fitness' : 0, 'Prob':0, 'Exp count': 0, 'Act count': 0},
+        dict_crossover =  {'Cromo #' : i, 'Mating pool': bit, 'Crossover Point' : 0, 'Offspring after XOver': 0, 'Value' : 0, 'Fitness' : 0,},
+        dict_mutation =  {'Cromo #' : i, 'After XOver': 0,  'After XMutation': 0, 'X' : 0, 'Fitness' : 0},
+        dict_padre_hijo = {'Bits padre':0, 'Fitness padre':0,'Bits hijo':0, 'Fitness hijo':0, 'Mejor fitness':0,'CadenaBits':0},
        # the lists extends of the dictionaries
-        list_selection.extend(dictSeleccion)
-        list_crossover.extend(dictCrossover)
-        list_mutation.extend(dictMutation)
+        list_selection.extend(dict_selection)
+        list_crossover.extend(dict_crossover)
+        list_mutation.extend(dict_mutation)
+        list_padre_hijo.extend(dict_padre_hijo)
+
+def conversion_genotype_fenotype(aux_bits_pob, x_min, x_max):
+    fenotype = 0
+    aux_range = (x_max - x_min)
+    Dx = aux_range/pow(2, len(aux_bits_pob))
+    x = int(aux_bits_pob, 2)
+    if x_min > x_max:
+        fenotype = x_max + (x*Dx) # convertion of binary to decimal, after multiply DX, then we add the initial value of x
+    else:
+        fenotype = x_min + (x*Dx) # convertion of binary to decimal, after multiply DX, then we add the initial value of x
+    return fenotype
 
 def selection():
     global list_selection
@@ -33,45 +70,43 @@ def selection():
     print('<==============================Selection Generation #',count_generations,'==============================>')
     for i in range(num_cromosomas):
         # Calculate the value of X
-        decimal = int(list_selection[i].get('Poblation'),2)
-        list_selection[i].update({'X': decimal})
+        aux_bits_pob = list_selection[i].get('Poblation')
+        x_value = conversion_genotype_fenotype(aux_bits_pob, x_min, x_max)
+        list_selection[i].update({'X': x_value})
         # Calculate the fitness of the individuals
-        fitness = (sin((4*decimal)) + (2*decimal))
+        fitness = (sin((4*x_value)) + (2*x_value))
         list_selection[i].update({'Fitness':fitness})
         # get the total fitness
         sum_fitness += list_selection[i].get('Fitness')
     #get the average of the fitness
     prom_fitness = (sum_fitness/len(list_selection))
 
+    # calculate the prob and expected count
     for i in range(len(list_selection)):
-        # get the probability of the individuals
-        aux_prob = (list_selection[i].get('Fitness')/sum_fitness)
-        # get the Exp count of the individuals
-        aux_expected_count = (list_selection[i].get('Fitness')/prom_fitness)
-        # update to table
-        list_selection[i].update({'Prob': aux_prob, 'Exp count': aux_expected_count})
+        list_selection[i].update({'Prob': list_selection[i].get('Fitness')/sum_fitness})
+        list_selection[i].update({'Exp count': list_selection[i].get('Fitness')/prom_fitness})
+    # numbers randoms for actual count
+    number_aleatory = numpy.random.randint(1,100,size=num_cromosomas)
+    # actual count
+    total_exp_count = 0
+    i = 0
 
-    # Calculate the actual count rounded the exp count
     for i in range(len(list_selection)):
         aux_exp_count = list_selection[i].get('Exp count')
-        aux_act_count = round(aux_exp_count)
-        list_selection[i].update({'Act count': aux_act_count})
-
-    posicion = 0
-    # Print list of a generation
-    printListSeleccion()
-    # get the individuals for the cross, depending on the Act count
+        rounded_exp_count = round(aux_exp_count)
+        total_exp_count += rounded_exp_count
+        if total_exp_count <= num_cromosomas:
+            list_selection[i].update({'Actual count': rounded_exp_count})
+        else:
+            break
+    print_list_selection(sum_fitness, prom_fitness)
+    position = 0
     for i in range(len(list_selection)):
-        if(list_selection[i].get('Act count') != 0 ):
-            for j in range(list_selection[i].get('Act count')):
-                if posicion < num_cromosomas:
-                    list_crossover[posicion].update({'Mating pool':list_selection[i].get('Poblation')})
-                    pass
-                else:
-                    posicion = 0
-                    list_crossover[posicion].update({'Mating pool':list_selection[i].get('Poblation')})
-                    pass
-                posicion +=1
+        if list_selection[i].get('Actual count') != 0:
+            for j in range(list_selection[i].get('Actual count')):
+                list_crossover[position].update({'Mating pool': list_selection[i].get('Poblation')})
+                list_padre_hijo[position].update({'Bits padre': list_selection[i].get('Poblation'), 'Fitness': list_selection[i].get('Fitness')})
+                position+=1
 
 def crossover():
     # variables auxiliar 
@@ -85,11 +120,7 @@ def crossover():
     print('<==============================Crossover Generation #',count_generations,'==============================>')
     for i in range(0, len(list_crossover), 2): # jumps of 2 positions
         # pointer of crossover in the bits
-        print('Cromosomas: #',i,' y #',i+1)
-        aux_pointer_crossover = int(input('Ingrese el punto de cruza entre los cromosomas:'))
-        while aux_pointer_crossover >= num_bits:
-            aux_pointer_crossover = int(input('Error, el punto de cruza ingresado, supero el numero de bits\nIngrese un punto de cruza entre 0 y ',num_bits,': '))
-        pointer_crossover = aux_pointer_crossover
+        pointer_crossover = randint(1, num_bits)
         # get the individual bits
         chromosome_1 = list_crossover[i].get('Mating pool')[0:pointer_crossover]
         # get the next individual bits
@@ -102,6 +133,7 @@ def crossover():
         chromosome_1 = chromosome_1+aux_chromosome_2
         # crossover 
         chromosome_2 = chromosome_2+aux_chromosome_1
+        # insert data in dictionary
         list_crossover[i].update({'Offspring after XOver': chromosome_1, 'Crossover Point': pointer_crossover})
         list_crossover[i+1].update({'Offspring after XOver': chromosome_2, 'Crossover Point': pointer_crossover})
         list_mutation[i].update({'After XOver':chromosome_1})
@@ -109,7 +141,7 @@ def crossover():
         
     for i in range(len(list_crossover)):
         chromosome = str(list_crossover[i].get('Offspring after XOver'))
-        chromosome = int(chromosome,2)
+        chromosome = conversion_genotype_fenotype(chromosome, x_min, x_max)
         list_crossover[i].update({'Value': chromosome})
 
     for i in range(len(list_crossover)):
@@ -118,7 +150,7 @@ def crossover():
         # Calculate the fitness of the individuals
         fitness = (sin((4*decimal)) + (2*decimal))
         list_crossover[i].update({'Fitness': fitness})
-    printListCrossover()
+    print_list_crossover()
 
 def mutation():
     global list_mutation
@@ -132,109 +164,80 @@ def mutation():
         # number random for mutation of the chromosome 2
         num_mutation_2 = (randint(1,100)/100)
         bits_mutation = ''
-        actual_bit = ''
         actual_bit = list_mutation[i].get('After XOver')
-        # print('=>Prob mutation:',prob_mutation,'\tIndividue:',num_mutation_1)
         if num_mutation_1 < prob_mutation:
-            # print(num_mutation_1,' < ',prob_mutation,' Individuo ',i,' mutará')
-            # print('Pi: ',prob_gen)
-            # print('actualStringBits: ',actual_bit)
             for data in actual_bit:
                 # mutation of gen
                 numRand = (randint(1,100)/100)
-                if prob_gen < numRand:
+                if numRand < prob_gen:
                     if data == '1':
                         bits_mutation += '0'
                     else:
                         bits_mutation += '1'
                 else:
                     bits_mutation += data
-            # print('Bit mutado: ',bits_mutation)
             list_mutation[i].update({'After XMutation': bits_mutation})
         else:
-            # print(num_mutation_1, '> ',prob_mutation, 'individuo',i, 'no mutara')
             list_mutation[i].update({'After XMutation':actual_bit})
 
-        bits_mutation = ''
-        # print('=>Prob mutation:',prob_mutation,'\tIndividue:',num_mutation_2)
         bits_mutation = list_mutation[i+1].get('After XOver')
-        if num_mutation_2 < prob_mutation:
-            # print(num_mutation_2,' < ',prob_mutation,' Individuo ',i+1,' mutará')
-            # print('Pi: ',prob_gen)
-            # print('actualStringBits: ',bits_mutation)
+        if num_mutation_1 < prob_mutation:
             for bit in bits_mutation:
                 numRand = (randint(1,100)/100)
-                if prob_gen < numRand:
+                if numRand < prob_gen:
                     if bit=='1':
                         bits_mutation += '0'
                     else:
                         bits_mutation += '1'
                 else:
                     bits_mutation += bit
-            # print('Bit mutado:',bits_mutation)
             list_mutation[i+1].update({'After XMutation' :bits_mutation})
         else:
-            # print(num_mutation_1,' > ',prob_mutation,' Individuo ',i+1,'no mutará')
             list_mutation[i+1].update({'After XMutation': bits_mutation})
 
     for i in range(len(list_mutation)):
-        aux_decimal = int(list_mutation[i].get('After XMutation'),2)
-        list_mutation[i].update({'XValue': aux_decimal})
-        decimal = list_mutation[i].get('XValue')
-        fitness = (sin((4*decimal)) + (2*decimal))
+        aux_bits = list_mutation[i].get('After XMutation')
+        x_value = conversion_genotype_fenotype(aux_bits, x_min, x_max)
+        list_mutation[i].update({'XValue': x_value})
+        fitness = (sin((4*x_value)) + (2*x_value))
         list_mutation[i].update({'Fitness': fitness})
+        list_padre_hijo[i].update({'Bits hijo': aux_bits, 'Fitness hijo': fitness})
+        if list_padre_hijo[i].get('Fitness hijo') > list_padre_hijo[i].get('Fitness padre'):
+            list_padre_hijo[i].update({'Mejor fitness': list_padre_hijo[i].get('Fitness hijo'), 'CadenaBits':list_padre_hijo[i].get('Bits hijo')})
+        else:
+            list_padre_hijo[i].update({'Mejor fitness': list_padre_hijo[i].get('Fitness padre'), 'CadenaBits':list_padre_hijo[i].get('Bits padre')})
 
-    # check the max, min and averages
-    aux_max = list_mutation[0].get('Fitness')        
-    aux_min = list_mutation[0].get('Fitness')
-    prom = 0
+    print_list_mutation()
+    print_padre_hijo()
 
-    for i in range(len(list_mutation)):
-        if aux_max < list_mutation[i].get('Fitness'):
-            aux_max = list_mutation[i].get('Fitness')
-        if aux_min > list_mutation[i].get('Fitness'):
-            aux_min = list_mutation[i].get('Fitness')
-        prom += list_mutation[i].get('Fitness')
-
-    prom = (prom/num_cromosomas)
-    dictResult = {'Num Generation' : count_generations, 'Maximo': aux_max, 'Minimo' : aux_min, 'Promedio' : prom},
-    print('GENERACION : ',num_generations,'\tMAXIMO =',aux_max,"\tMINIMO = ",aux_min,"\tPROMEDIO = ",prom,'\n')
-    list_result.extend(dictResult)
-
-def updateTables(pobInitial):
-    global list_selection
-    global list_mutation
-    printListMutation()
-    for i in range(pobInitial):
-        if(list_mutation[i].get('Fitness') >  list_selection[i].get('Fitness')):
-            list_selection[i].update({'Initial population':list_mutation[i].get('After XMutation'), })
-        list_selection[i].update({'Actual count':0})
-
-def printListSeleccion():
-    global list_selection
-    global num_generations
-    for i in range(len(list_selection)):
-        print(list_selection[i])
-
-def printListCrossover():
-    global num_generations
-    global list_crossover
-    for i in range(len(list_crossover)):
-        print(list_crossover[i])
+def updateTables():
+    for i in range(num_cromosomas):
+        if list_padre_hijo[i].get('Fitness hijo') > list_padre_hijo[i].get('Fitness padre'):
+            list_selection[i].update({'Poblation': list_padre_hijo[i].get('Bits hijo')})
+        else:
+            list_selection[i].update({'Poblation': list_padre_hijo[i].get('Bits padre')})
+        list_selection[i].update({'X':0, 'Fitness':0, 'Prob':0, 'Exp count':0, 'Act count':0})
     
-def printListMutation():
-    global num_generations
-    global list_mutation
-    for i in range(len(list_mutation)):
-        print(list_mutation[i])
+    maximo = list_padre_hijo[0].get('Mejor fitness')
+    minimo = list_padre_hijo[0].get('Mejor fitness')
+    suma_fitness = list_padre_hijo[0].get('Mejor fitness')
 
-def printListResult():
-    global num_generations
-    global list_result
-    for i in range(len(list_result)):
-        print(list_result[i])
+    for i in range(1, len(list_padre_hijo)):
+        aux_fitness = list_padre_hijo[i].get('Mejor fitness')
 
-def generateGraphics(scaleXMin, scaleXMax):
+        if maximo < aux_fitness:
+            maximo = aux_fitness
+        if minimo > aux_fitness:
+            minimo = aux_fitness
+        
+        suma_fitness += aux_fitness
+
+    aux_prom = suma_fitness/num_cromosomas
+    dictionaryResult = {'Num generation':count_generations, 'Maximo': maximo, 'Minimo': minimo, 'Promedio': aux_prom},
+    print('GENERACION : ',count_generations,'\tMAXIMO =',maximo,"\tMINIMO = ",minimo,'\tTotal fitness',suma_fitness," \tPROMEDIO = ",aux_prom,'\n')
+    list_result.extend(dictionaryResult)
+
+def generate_graphics(scaleXMin, scaleXMax):
     global count_generations
     maximos = []
     minimos = []
@@ -272,10 +275,21 @@ aux_generations = int(input('Ingrese el numero de generaciones a realizar: '))
 while aux_generations < 1:
     aux_generations = int(input('Por favor ingrese un numero mayor a 0: '))
 num_generations = aux_generations
+# Values max and mins of X
+aux_x_min = float(input('Ingrese el valor minimo de X: '))
+while aux_x_min < 1:
+    aux_x_min = float(input('Por favor ingrese un valor mayor a 0 para el minimo de X: '))
+x_min = aux_x_min
+aux_x_max = float(input('Ingrese el valor maximo de X: '))
+while aux_x_max < 1:
+    aux_x_max = float(input('Por favor ingrese un valor mayor a 0 para el maximo de X: '))
+x_max = aux_x_max
+# probability of mutation of a chromosome
 aux_prob_mutation = int(input('Ingrese la probabilidad de mutacion: '))
 while aux_prob_mutation < 1 or aux_prob_mutation > 100:
     aux_prob_mutation = int(input('Ingrese una probabilidad de mutacion mayor a 0: '))
 prob_mutation = aux_prob_mutation
+# probability of mutation of a chromosome
 aux_prob_gen = int(input('Ingrese la probabilidad de mutacion de un gen: '))
 while aux_prob_gen < 1 or aux_prob_gen > 100:
     aux_prob_gen = int(input('Ingrese una probabilidad de mutacion mayor a 0: '))
@@ -287,9 +301,9 @@ for i in range(num_generations):
     selection()
     crossover()
     mutation()
-    updateTables(num_cromosomas)
+    updateTables()
 print('<================Margenes de grafica=================>')
 XScaleMin = float(input('Ingrese el margen minimo de X a mostrar en el grafico:'))
 XScaleMax = float(input('Ingrese el margen maximo de X a mostrar en el grafico:'))
-printListResult()
-generateGraphics(XScaleMin, XScaleMax)
+print_list_result()
+generate_graphics(XScaleMin, XScaleMax)
